@@ -1,0 +1,111 @@
+{
+  "name": "RentDue",
+  "type": "object",
+  "properties": {
+    "lease_id": {
+      "type": "string",
+      "title": "Bail"
+    },
+    "tenant_id": {
+      "type": "string",
+      "title": "Locataire"
+    },
+    "tenant_name": {
+      "type": "string",
+      "title": "Locataire (nom)"
+    },
+    "tenant_phone": {
+      "type": "string",
+      "title": "T\u00e9l\u00e9phone"
+    },
+    "unit_id": {
+      "type": "string",
+      "title": "Unit\u00e9"
+    },
+    "unit_label": {
+      "type": "string",
+      "title": "Unit\u00e9 (libell\u00e9)"
+    },
+    "property_id": {
+      "type": "string",
+      "title": "Bien"
+    },
+    "property_name": {
+      "type": "string",
+      "title": "Bien (nom)"
+    },
+    "period": {
+      "type": "string",
+      "title": "P\u00e9riode (AAAA-MM)"
+    },
+    "due_date": {
+      "type": "string",
+      "title": "Date limite",
+      "format": "date"
+    },
+    "amount_due": {
+      "type": "number",
+      "title": "Montant d\u00fb (FCFA)"
+    },
+    "amount_paid": {
+      "type": "number",
+      "title": "Montant pay\u00e9 (FCFA)",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "title": "Statut",
+      "enum": [
+        "Attente",
+        "Partiel",
+        "Pay\u00e9",
+        "Retard"
+      ],
+      "default": "Attente"
+    }
+  },
+  "required": [
+    "lease_id",
+    "period",
+    "due_date",
+    "amount_due"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

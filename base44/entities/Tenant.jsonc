@@ -1,0 +1,83 @@
+{
+  "name": "Tenant",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "title": "Nom complet"
+    },
+    "phone": {
+      "type": "string",
+      "title": "T\u00e9l\u00e9phone"
+    },
+    "email": {
+      "type": "string",
+      "title": "Email"
+    },
+    "id_number": {
+      "type": "string",
+      "title": "Pi\u00e8ce d'identit\u00e9"
+    },
+    "city": {
+      "type": "string",
+      "title": "Ville"
+    },
+    "rent_amount": {
+      "type": "number",
+      "title": "Loyer mensuel (FCFA)"
+    },
+    "advance_amount": {
+      "type": "number",
+      "title": "Avance vers\u00e9e (FCFA)"
+    },
+    "advance_months": {
+      "type": "number",
+      "title": "Mois d'avance"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "full_name"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

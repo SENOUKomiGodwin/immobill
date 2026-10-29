@@ -1,0 +1,8 @@
+node_modules
+dist
+dist-ssr
+*.local
+base44
+backend/node_modules
+backend/dist
+backend/coverage

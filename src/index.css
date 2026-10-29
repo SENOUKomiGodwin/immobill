@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 216 20% 95%;
+    --foreground: 230 36% 7%;
+    --card: 0 0% 100%;
+    --card-foreground: 230 36% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 230 36% 7%;
+    --primary: 233 92% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 216 22% 97%;
+    --secondary-foreground: 230 30% 14%;
+    --muted: 216 22% 96%;
+    --muted-foreground: 217 11% 47%;
+    --accent: 228 100% 97%;
+    --accent-foreground: 233 80% 40%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 218 20% 91%;
+    --input: 218 20% 89%;
+    --ring: 233 92% 48%;
+    --chart-1: 233 92% 48%;
+    --chart-2: 128 30% 48%;
+    --chart-3: 28 88% 58%;
+    --chart-4: 193 80% 45%;
+    --chart-5: 280 60% 60%;
+    --radius: 1rem;
+    --font-heading: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 230 30% 14%;
+    --sidebar-primary: 233 92% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 228 100% 97%;
+    --sidebar-accent-foreground: 233 80% 40%;
+    --sidebar-border: 218 20% 92%;
+    --sidebar-ring: 233 92% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+    font-feature-settings: "ss01" on, "cv11" on;
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+  }
+}
+
+@layer components {
+  .card-surface {
+    @apply rounded-[20px] border border-[#EAEEF4] bg-white;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -18px rgba(16, 24, 40, 0.18);
+  }
+
+  .field {
+    @apply h-11 w-full rounded-xl border border-input bg-white px-3 text-sm outline-none transition
+      placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/10;
+  }
+
+  textarea.field {
+    @apply min-h-[80px] resize-none py-2.5;
+  }
+
+  .label-sm {
+    @apply mb-1.5 block text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground;
+  }
+}

@@ -1,0 +1,2082 @@
+openapi: 3.0.3
+info:
+  title: Immobill API
+  description: Backend REST pour Immobill - Gestion locative
+  version: 1.0.0
+  contact:
+    name: Immobill
+  license:
+    name: Propriétaire
+
+servers:
+  - url: http://localhost:3000/api
+    description: Serveur de développement
+  - url: https://api.immobill.com/api
+    description: Serveur de production
+
+tags:
+  - name: Auth
+    description: Authentification et gestion des utilisateurs
+  - name: Properties
+    description: Gestion des biens immobiliers
+  - name: Units
+    description: Gestion des unités louables
+  - name: Tenants
+    description: Gestion des locataires
+  - name: Leases
+    description: Gestion des baux locatifs
+  - name: RentDues
+    description: Gestion des échéances de loyer
+  - name: Payments
+    description: Gestion des paiements
+  - name: Expenses
+    description: Gestion des dépenses
+  - name: Dashboard
+    description: Tableau de bord et statistiques
+  - name: Reports
+    description: Bilans financiers
+  - name: Reminders
+    description: Gestion des relances
+  - name: Files
+    description: Gestion des fichiers
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Inscription d'un nouvel utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Utilisateur créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Connexion d'un utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion réussie
+          headers:
+            Set-Cookie:
+              description: Refresh token httpOnly
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Trop de tentatives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Déconnexion
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Déconnecté avec succès
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rafraîchissement du token d'accès
+      responses:
+        '200':
+          description: Token rafraîchi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Token invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Utilisateur authentifié
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Utilisateur actuel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Demande de réinitialisation de mot de passe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Email envoyé (ou email inexistant)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Réinitialisation du mot de passe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Mot de passe réinitialisé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Token invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /properties:
+    get:
+      tags: [Properties]
+      summary: Liste des biens
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - name: property_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des biens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertiesResponse'
+    post:
+      tags: [Properties]
+      summary: Création d'un bien
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyCreate'
+      responses:
+        '201':
+          description: Bien créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /properties/{id}:
+    get:
+      tags: [Properties]
+      summary: Détail d'un bien
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Détail du bien
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        '404':
+          description: Bien introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Properties]
+      summary: Modification d'un bien
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyUpdate'
+      responses:
+        '200':
+          description: Bien modifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        '404':
+          description: Bien introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Properties]
+      summary: Suppression d'un bien
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Bien supprimé
+        '404':
+          description: Bien introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Bien contient des unités
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /units:
+    get:
+      tags: [Units]
+      summary: Liste des unités
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - name: property_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des unités
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitsResponse'
+    post:
+      tags: [Units]
+      summary: Création d'une unité
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnitCreate'
+      responses:
+        '201':
+          description: Unité créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unit'
+
+  /units/bulk:
+    post:
+      tags: [Units]
+      summary: Création en masse d'unités
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [units]
+              properties:
+                units:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/UnitCreate'
+      responses:
+        '201':
+          description: Unités créées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Unit'
+                  count:
+                    type: integer
+
+  /units/{id}:
+    put:
+      tags: [Units]
+      summary: Modification d'une unité
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnitUpdate'
+      responses:
+        '200':
+          description: Unité modifiée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unit'
+    delete:
+      tags: [Units]
+      summary: Suppression d'une unité
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Unité supprimée
+        '409':
+          description: Unité a un bail actif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tenants:
+    get:
+      tags: [Tenants]
+      summary: Liste des locataires
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Liste des locataires
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantsResponse'
+    post:
+      tags: [Tenants]
+      summary: Création d'un locataire
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantCreate'
+      responses:
+        '201':
+          description: Locataire créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+  /tenants/{id}:
+    put:
+      tags: [Tenants]
+      summary: Modification d'un locataire
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantUpdate'
+      responses:
+        '200':
+          description: Locataire modifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+    delete:
+      tags: [Tenants]
+      summary: Suppression d'un locataire
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Locataire supprimé
+        '409':
+          description: Locataire a un bail actif
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /leases:
+    get:
+      tags: [Leases]
+      summary: Liste des baux
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Actif, Terminé]
+        - name: property_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des baux
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeasesResponse'
+    post:
+      tags: [Leases]
+      summary: Création d'un bail
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaseCreate'
+      responses:
+        '201':
+          description: Bail créé avec échéances
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lease:
+                    $ref: '#/components/schemas/Lease'
+                  rent_dues:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentDue'
+        '409':
+          description: Unité déjà louée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /leases/{id}:
+    put:
+      tags: [Leases]
+      summary: Modification d'un bail
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaseUpdate'
+      responses:
+        '200':
+          description: Bail modifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lease'
+    delete:
+      tags: [Leases]
+      summary: Suppression d'un bail
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Bail supprimé
+        '409':
+          description: Bail a des paiements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /leases/{id}/terminate:
+    put:
+      tags: [Leases]
+      summary: Clôture d'un bail
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Bail clôturé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lease:
+                    $ref: '#/components/schemas/Lease'
+                  unit:
+                    $ref: '#/components/schemas/Unit'
+                  cancelled_dues:
+                    type: integer
+
+  /rent-dues:
+    get:
+      tags: [RentDues]
+      summary: Liste des échéances
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - name: lease_id
+          in: query
+          schema:
+            type: string
+        - name: period
+          in: query
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}$'
+      responses:
+        '200':
+          description: Liste des échéances
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentDuesResponse'
+    post:
+      tags: [RentDues]
+      summary: Création en masse d'échéances
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rent_dues]
+              properties:
+                rent_dues:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/RentDueCreate'
+      responses:
+        '201':
+          description: Échéances créées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentDue'
+                  count:
+                    type: integer
+        '409':
+          description: Doublon de période
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rent-dues/{id}:
+    put:
+      tags: [RentDues]
+      summary: Modification d'une échéance
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount_due:
+                  type: integer
+      responses:
+        '200':
+          description: Échéance modifiée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentDue'
+    delete:
+      tags: [RentDues]
+      summary: Suppression d'une échéance
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Échéance supprimée
+        '409':
+          description: Échéance a des paiements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /payments:
+    get:
+      tags: [Payments]
+      summary: Liste des paiements
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - name: lease_id
+          in: query
+          schema:
+            type: string
+        - name: due_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des paiements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentsResponse'
+    post:
+      tags: [Payments]
+      summary: Création d'un paiement
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreate'
+      responses:
+        '201':
+          description: Paiement créé avec échéance mise à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment:
+                    $ref: '#/components/schemas/Payment'
+                  rent_due:
+                    $ref: '#/components/schemas/RentDue'
+        '422':
+          description: Paiement dépasse le solde
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /payments/{id}/cancel:
+    put:
+      tags: [Payments]
+      summary: Annulation d'un paiement
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Paiement annulé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment:
+                    $ref: '#/components/schemas/Payment'
+                  rent_due:
+                    $ref: '#/components/schemas/RentDue'
+
+  /expenses:
+    get:
+      tags: [Expenses]
+      summary: Liste des dépenses
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - name: property_id
+          in: query
+          schema:
+            type: string
+        - name: paid
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Liste des dépenses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpensesResponse'
+    post:
+      tags: [Expenses]
+      summary: Création d'une dépense
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseCreate'
+      responses:
+        '201':
+          description: Dépense créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+
+  /expenses/{id}:
+    put:
+      tags: [Expenses]
+      summary: Modification d'une dépense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseUpdate'
+      responses:
+        '200':
+          description: Dépense modifiée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+
+  /expenses/{id}/cancel:
+    put:
+      tags: [Expenses]
+      summary: Annulation d'une dépense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Dépense annulée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expense:
+                    $ref: '#/components/schemas/Expense'
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Données du tableau de bord
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Données dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardData'
+
+  /bilans:
+    get:
+      tags: [Reports]
+      summary: Bilans financiers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}$'
+      responses:
+        '200':
+          description: Bilans
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BilansData'
+
+  /reminders:
+    get:
+      tags: [Reminders]
+      summary: Liste des impayés avec messages de relance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tier
+          in: query
+          schema:
+            type: integer
+            enum: [1, 7, 15]
+      responses:
+        '200':
+          description: Liste des relances
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reminder'
+                  total:
+                    type: integer
+    post:
+      tags: [Reminders]
+      summary: Enregistrement d'une relance envoyée
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReminderCreate'
+      responses:
+        '201':
+          description: Relance enregistrée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reminder'
+        '409':
+          description: Relance déjà envoyée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reminders/history:
+    get:
+      tags: [Reminders]
+      summary: Historique des relances
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: due_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Historique
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reminder'
+
+  /files:
+    post:
+      tags: [Files]
+      summary: Upload d'un fichier
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                category:
+                  type: string
+                  enum: [expense_receipt, tenant_id]
+      responses:
+        '201':
+          description: Fichier uploadé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUpload'
+        '400':
+          description: Type de fichier invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Fichier trop volumineux
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/{id}/url:
+    get:
+      tags: [Files]
+      summary: URL signée pour un fichier
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - name: expires_in
+          in: query
+          schema:
+            type: integer
+            default: 300
+      responses:
+        '200':
+          description: URL signée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signed_url:
+                    type: string
+                  expires_at:
+                    type: string
+                    format: date-time
+        '404':
+          description: Fichier introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /audit-log:
+    get:
+      tags: [Audit]
+      summary: Journal d'audit
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+        - name: entity_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Journal d'audit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLogEntry'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 50
+    Sort:
+      name: sort
+      in: query
+      schema:
+        type: string
+        example: created_date
+        description: Prefixer avec - pour décroissant (ex: -created_date)
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          type: string
+          enum: [admin, user]
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        full_name:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    BaseRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        created_date:
+          type: string
+          format: date-time
+        updated_date:
+          type: string
+          format: date-time
+        created_by_id:
+          type: string
+
+    Property:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          properties:
+            name:
+              type: string
+            type:
+              type: string
+              enum: [Immeuble, Maison, Résidence, Boutique, Terrain]
+            address:
+              type: string
+            city:
+              type: string
+            notes:
+              type: string
+
+    PropertyCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [Immeuble, Maison, Résidence, Boutique, Terrain]
+          default: Immeuble
+        address:
+          type: string
+        city:
+          type: string
+        notes:
+          type: string
+
+    PropertyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [Immeuble, Maison, Résidence, Boutique, Terrain]
+        address:
+          type: string
+        city:
+          type: string
+        notes:
+          type: string
+
+    PropertiesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Property'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Unit:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          properties:
+            property_id:
+              type: string
+            label:
+              type: string
+            type:
+              type: string
+              enum: [Appartement, Studio, Chambre, Boutique, Autre]
+            surface:
+              type: integer
+            rent_amount:
+              type: integer
+            charges_amount:
+              type: integer
+            status:
+              type: string
+              enum: [Libre, Occupé]
+
+    UnitCreate:
+      type: object
+      required: [property_id, label]
+      properties:
+        property_id:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [Appartement, Studio, Chambre, Boutique, Autre]
+          default: Appartement
+        surface:
+          type: integer
+        rent_amount:
+          type: integer
+        charges_amount:
+          type: integer
+        status:
+          type: string
+          enum: [Libre, Occupé]
+          default: Libre
+
+    UnitUpdate:
+      type: object
+      properties:
+        property_id:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [Appartement, Studio, Chambre, Boutique, Autre]
+        surface:
+          type: integer
+        rent_amount:
+          type: integer
+        charges_amount:
+          type: integer
+        status:
+          type: string
+          enum: [Libre, Occupé]
+
+    UnitsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Unit'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Tenant:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          properties:
+            full_name:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+            id_number:
+              type: string
+            city:
+              type: string
+            rent_amount:
+              type: integer
+            advance_amount:
+              type: integer
+            advance_months:
+              type: integer
+            notes:
+              type: string
+
+    TenantCreate:
+      type: object
+      required: [full_name]
+      properties:
+        full_name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        id_number:
+          type: string
+        city:
+          type: string
+        rent_amount:
+          type: integer
+        advance_amount:
+          type: integer
+        advance_months:
+          type: integer
+        notes:
+          type: string
+
+    TenantUpdate:
+      type: object
+      properties:
+        full_name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        id_number:
+          type: string
+        city:
+          type: string
+        rent_amount:
+          type: integer
+        advance_amount:
+          type: integer
+        advance_months:
+          type: integer
+        notes:
+          type: string
+
+    TenantsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tenant'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Lease:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          properties:
+            unit_id:
+              type: string
+            unit_label:
+              type: string
+            property_id:
+              type: string
+            property_name:
+              type: string
+            tenant_id:
+              type: string
+            tenant_name:
+              type: string
+            tenant_phone:
+              type: string
+            start_date:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
+            rent_amount:
+              type: integer
+            charges_amount:
+              type: integer
+            deposit_amount:
+              type: integer
+            due_day:
+              type: integer
+              minimum: 1
+              maximum: 28
+            grace_days:
+              type: integer
+            penalty_enabled:
+              type: boolean
+            status:
+              type: string
+              enum: [Actif, Terminé]
+            notes:
+              type: string
+
+    LeaseCreate:
+      type: object
+      required: [unit_id, tenant_id, start_date]
+      properties:
+        unit_id:
+          type: string
+        tenant_id:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        rent_amount:
+          type: integer
+        charges_amount:
+          type: integer
+        deposit_amount:
+          type: integer
+        due_day:
+          type: integer
+          minimum: 1
+          maximum: 28
+          default: 5
+        grace_days:
+          type: integer
+          default: 0
+        penalty_enabled:
+          type: boolean
+          default: false
+        notes:
+          type: string
+
+    LeaseUpdate:
+      type: object
+      properties:
+        end_date:
+          type: string
+          format: date
+        rent_amount:
+          type: integer
+        charges_amount:
+          type: integer
+        deposit_amount:
+          type: integer
+        due_day:
+          type: integer
+        grace_days:
+          type: integer
+        penalty_enabled:
+          type: boolean
+        notes:
+          type: string
+
+    LeasesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Lease'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    RentDue:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          properties:
+            lease_id:
+              type: string
+            tenant_id:
+              type: string
+            tenant_name:
+              type: string
+            tenant_phone:
+              type: string
+            unit_id:
+              type: string
+            unit_label:
+              type: string
+            property_id:
+              type: string
+            property_name:
+              type: string
+            period:
+              type: string
+              pattern: '^\d{4}-\d{2}$'
+            due_date:
+              type: string
+              format: date
+            amount_due:
+              type: integer
+            amount_paid:
+              type: integer
+            status:
+              type: string
+              enum: [Attente, Partiel, Payé, Retard, Annulé]
+            computed_status:
+              type: string
+              enum: [paid, partial, late, pending]
+            days_late:
+              type: integer
+
+    RentDueCreate:
+      type: object
+      required: [lease_id, period, due_date, amount_due]
+      properties:
+        lease_id:
+          type: string
+        period:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+        due_date:
+          type: string
+          format: date
+        amount_due:
+          type: integer
+        tenant_id:
+          type: string
+        tenant_name:
+          type: string
+        tenant_phone:
+          type: string
+        unit_id:
+          type: string
+        unit_label:
+          type: string
+        property_id:
+          type: string
+        property_name:
+              type: string
+
+    RentDuesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RentDue'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Payment:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          properties:
+            due_id:
+              type: string
+            lease_id:
+              type: string
+            tenant_id:
+              type: string
+            tenant_name:
+              type: string
+            unit_label:
+              type: string
+            property_name:
+              type: string
+            period:
+              type: string
+              pattern: '^\d{4}-\d{2}$'
+            amount:
+              type: integer
+            payment_date:
+              type: string
+              format: date
+            method:
+              type: string
+              enum: [Espèces, Mobile money, Virement, Chèque]
+            reference:
+              type: string
+            receipt_number:
+              type: string
+            note:
+              type: string
+            cancelled:
+              type: boolean
+            cancellation_reason:
+              type: string
+
+    PaymentCreate:
+      type: object
+      required: [due_id, amount, payment_date]
+      properties:
+        due_id:
+          type: string
+        amount:
+          type: integer
+          minimum: 1
+        payment_date:
+          type: string
+          format: date
+        method:
+          type: string
+          enum: [Espèces, Mobile money, Virement, Chèque]
+          default: Espèces
+        reference:
+          type: string
+        note:
+          type: string
+
+    PaymentsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Expense:
+      allOf:
+        - $ref: '#/components/schemas/BaseRecord'
+        - type: object
+          properties:
+            property_id:
+              type: string
+            property_name:
+              type: string
+            label:
+              type: string
+            category:
+              type: string
+              enum: [Plomberie, Peinture, Électricité, Taxes, Assurance, Gardiennage, Réparation, Autre]
+            vendor:
+              type: string
+            amount:
+              type: integer
+            expense_date:
+              type: string
+              format: date
+            paid:
+              type: boolean
+            refacture:
+              type: boolean
+            recovered_amount:
+              type: integer
+            receipt_uri:
+              type: string
+            note:
+              type: string
+            cancelled:
+              type: boolean
+            cancellation_reason:
+              type: string
+
+    ExpenseCreate:
+      type: object
+      required: [label, amount, expense_date]
+      properties:
+        label:
+          type: string
+        category:
+          type: string
+          enum: [Plomberie, Peinture, Électricité, Taxes, Assurance, Gardiennage, Réparation, Autre]
+          default: Autre
+        property_id:
+          type: string
+        vendor:
+          type: string
+        amount:
+          type: integer
+          minimum: 1
+        expense_date:
+          type: string
+          format: date
+        paid:
+          type: boolean
+          default: true
+        refacture:
+          type: boolean
+          default: false
+        recovered_amount:
+          type: integer
+        note:
+          type: string
+        receipt_uri:
+          type: string
+
+    ExpenseUpdate:
+      type: object
+      properties:
+        label:
+          type: string
+        category:
+          type: string
+          enum: [Plomberie, Peinture, Électricité, Taxes, Assurance, Gardiennage, Réparation, Autre]
+        property_id:
+          type: string
+        vendor:
+          type: string
+        amount:
+          type: integer
+        expense_date:
+          type: string
+          format: date
+        paid:
+          type: boolean
+        refacture:
+          type: boolean
+        recovered_amount:
+          type: integer
+        note:
+          type: string
+        receipt_uri:
+          type: string
+
+    ExpensesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expense'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    DashboardData:
+      type: object
+      properties:
+        stats:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: number
+              delta:
+                type: number
+                nullable: true
+              previous:
+                type: number
+                nullable: true
+              tone:
+                type: string
+                enum: [money, count]
+              hint:
+                type: string
+              suffix:
+                type: string
+        revenue:
+          type: object
+          properties:
+            total:
+              type: integer
+            delta:
+              type: number
+            previous:
+              type: integer
+            caption:
+              type: string
+            points:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    type: string
+                  value:
+                    type: integer
+        occupancy:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: integer
+              color:
+                type: string
+        weekly:
+          type: array
+          items:
+            type: object
+            properties:
+              day:
+                type: string
+              value:
+                type: integer
+        collection:
+          type: object
+          properties:
+            rate:
+              type: integer
+            target:
+              type: integer
+        overdue:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              tenant:
+                type: string
+              unit:
+                type: string
+              days:
+                type: integer
+              amount:
+                type: integer
+        payments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              tenant:
+                type: string
+              unit:
+                type: string
+              amount:
+                type: integer
+              method:
+                type: string
+              date:
+                type: string
+              status:
+                type: string
+                enum: [Payé, Partiel, Retard, Attente]
+
+    BilansData:
+      type: object
+      properties:
+        period:
+          type: string
+        revenue:
+          type: integer
+        spent:
+          type: integer
+        net:
+          type: integer
+        expected:
+          type: integer
+        collected:
+          type: integer
+        rate:
+          type: integer
+        active_leases:
+          type: integer
+        series:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              revenus:
+                type: integer
+              depenses:
+                type: integer
+        by_property:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              expected:
+                type: integer
+              collected:
+                type: integer
+              expenses:
+                type: integer
+              net:
+                type: integer
+
+    Reminder:
+      type: object
+      properties:
+        id:
+          type: string
+        due_id:
+          type: string
+        tier:
+          type: integer
+        method:
+          type: string
+        sent_at:
+          type: string
+          format: date-time
+        created_by_id:
+          type: string
+
+    ReminderCreate:
+      type: object
+      required: [due_id, tier]
+      properties:
+        due_id:
+          type: string
+        tier:
+          type: integer
+          enum: [1, 7, 15]
+        method:
+          type: string
+        message:
+          type: string
+
+    FileUpload:
+      type: object
+      properties:
+        file_uri:
+          type: string
+        file_name:
+          type: string
+        file_size:
+          type: integer
+        content_type:
+          type: string
+
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        user_name:
+          type: string
+        action:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+        before:
+          type: object
+        after:
+          type: object
+        reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time

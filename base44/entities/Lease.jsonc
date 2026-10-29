@@ -1,0 +1,125 @@
+{
+  "name": "Lease",
+  "type": "object",
+  "properties": {
+    "unit_id": {
+      "type": "string",
+      "title": "Unit\u00e9"
+    },
+    "unit_label": {
+      "type": "string",
+      "title": "Unit\u00e9 (libell\u00e9)"
+    },
+    "property_id": {
+      "type": "string",
+      "title": "Bien"
+    },
+    "property_name": {
+      "type": "string",
+      "title": "Bien (nom)"
+    },
+    "tenant_id": {
+      "type": "string",
+      "title": "Locataire"
+    },
+    "tenant_name": {
+      "type": "string",
+      "title": "Locataire (nom)"
+    },
+    "tenant_phone": {
+      "type": "string",
+      "title": "T\u00e9l\u00e9phone du locataire"
+    },
+    "start_date": {
+      "type": "string",
+      "title": "Date de d\u00e9but",
+      "format": "date"
+    },
+    "end_date": {
+      "type": "string",
+      "title": "Date de fin",
+      "format": "date"
+    },
+    "rent_amount": {
+      "type": "number",
+      "title": "Loyer mensuel (FCFA)"
+    },
+    "charges_amount": {
+      "type": "number",
+      "title": "Charges mensuelles (FCFA)"
+    },
+    "deposit_amount": {
+      "type": "number",
+      "title": "Caution (FCFA)"
+    },
+    "due_day": {
+      "type": "number",
+      "title": "Jour d'\u00e9ch\u00e9ance"
+    },
+    "grace_days": {
+      "type": "number",
+      "title": "D\u00e9lai de gr\u00e2ce (jours)"
+    },
+    "penalty_enabled": {
+      "type": "boolean",
+      "title": "P\u00e9nalit\u00e9s de retard activ\u00e9es",
+      "default": false
+    },
+    "status": {
+      "type": "string",
+      "title": "Statut",
+      "enum": [
+        "Actif",
+        "Termin\u00e9"
+      ],
+      "default": "Actif"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "unit_id",
+    "tenant_id",
+    "start_date"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
